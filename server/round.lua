@@ -58,13 +58,15 @@ end
 --- Waits for one player's choice from `allowed` (a set), up to `seconds`. Gone or out of time: `default`.
 local function ask(T, P, kind, allowed, seconds, hand, default, cost)
     if P.gone then return default end
-    P.ask = { kind = kind, allowed = allowed, hand = hand, deadline = now() + seconds * 1000, span = seconds * 1000, cost = cost }
+    -- Held here as well as on P: Leave takes P.ask away, and reading P.ask.answer after that would end the round
+    -- for the whole table (its error handler refunds everyone).
+    local a = { kind = kind, allowed = allowed, hand = hand, deadline = now() + seconds * 1000, span = seconds * 1000, cost = cost }
+    P.ask = a
     Hud(P)
-    while not P.ask.answer and not P.gone and now() < P.ask.deadline do Wait(100) end
-    local answer = P.ask.answer or default
-    P.ask = nil
+    while not a.answer and not P.gone and now() < a.deadline do Wait(100) end
+    if P.ask == a then P.ask = nil end
     Hud(P)
-    return answer
+    return (not P.gone and a.answer) or default
 end
 
 local function pAnim(P, anim)
